@@ -20,12 +20,15 @@ jobs:
       - name: uv setup
         uses: astral-sh/setup-uv@v8.2.0
       - name: run script
-        run: uv run main.py
+        run: |
+          uv run main.py
+          mkdir -p src
+          mv train_schedule.json src/index.json
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5.0.0
         with:
           name: train_schedule
-          path: train_schedule.json
+          path: src/
       - name: Deploy GitHub Pages site
         uses: actions/deploy-pages@v3.0.2-node.24
         with:
