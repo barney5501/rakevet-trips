@@ -6,6 +6,7 @@
 # ]
 # ///
 
+import os
 import requests
 from zipfile import ZipFile
 import pandas as pd
@@ -13,12 +14,53 @@ import numpy as np
 import json
 
 TRAIN_AGENCY_CODE = 2
-GTFS_URL = "https://gtfs.mot.gov.il/gtfsfiles"
 GTFS_FILE = "israel-public-transportation.zip"
+GTFS_URL = f"https://gtfs.mot.gov.il/gtfsfiles/{GTFS_FILE}"
 EXTRACTED_DIR_NAME = "israel-public-transportation"
 
+MIRROR_TOKEN_NAME = "MOBILITY_TOKEN"
+MIRROR_URL = "https://api.mobilitydatabase.org/v1"
+MIRROR_TOKENS = "tokens"
+MIRROR_GTFS_FEED = "gtfs_feeds/mdb-2519"
+
+
+def get_mirror_token(refresh_token):
+    try:
+        headers = {"Content-Type": "application/json"}
+        payload = {"refresh_token": refresh_token}
+        res = requests.post(
+            f"{MIRROR_URL}/{MIRROR_TOKENS}", headers=headers, json=payload
+        )
+        res.raise_for_status()
+        token = res.json()["access_token"]
+        return token
+    except Exception as e:
+        print(f"error while trying to retrive token: {e}")
+        raise e
+
+
+def get_latest_mirror(access_token):
+    try:
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
+        res = requests.get(f"{MIRROR_URL}/{MIRROR_GTFS_FEED}", headers=headers)
+        res.raise_for_status()
+        url = res.json()["latest_dataset"]["hosted_url"]
+        return url
+    except Exception as e:
+        print(f"error while trying to retrive latest mirror: {e}")
+        raise e
+
+
+if os.getenv(MIRROR_TOKEN_NAME):
+    mirror_refresh_token = os.getenv(MIRROR_TOKEN_NAME)
+    mirror_access_token = get_mirror_token(mirror_refresh_token)
+    GTFS_URL = get_latest_mirror(mirror_access_token)
+
 # zip extraction and cleaning
-gtfs_response = requests.get(f"{GTFS_URL}/{GTFS_FILE}", stream=True)
+gtfs_response = requests.get(GTFS_URL, stream=True)
 with open(GTFS_FILE, "wb") as zf:
     zf.write(gtfs_response.content)
 with ZipFile(GTFS_FILE, "r") as zf:

@@ -20,6 +20,8 @@ jobs:
       - name: uv setup
         uses: astral-sh/setup-uv@v8.2.0
       - name: run script
+        env:
+          MOBILITY_TOKEN: ${{ secrets.MOBILITY_TOKEN }}
         run: |
           uv run main.py
           mkdir -p src
