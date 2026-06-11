@@ -1,0 +1,32 @@
+name: run and update json
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  run-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+      - name: uv setup
+        uses: astral-sh/setup-uv@v8.2.0
+      - name: run script
+        run: uv run main.py
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          name: train_schedule
+          path: train_schedule.json
+      - name: Deploy GitHub Pages site
+        uses: actions/deploy-pages@v3.0.2-node.24
+        with:
+          artifact_name: train_schedule
