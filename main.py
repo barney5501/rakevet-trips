@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
-# "pandas"
-# "numpy"
+# "pandas",
+# "numpy",
 # "requests",
 # ]
 # ///
