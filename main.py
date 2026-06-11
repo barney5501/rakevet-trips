@@ -5,55 +5,38 @@ import json
 TRAIN_AGENCY_CODE = 2
 
 """
-general flow
-routes.txt -> route_id, route_name
-trips.txt -> route_id, trip_id
-stop_times.txt -> trip_id, stop_id, arrival_time, departure_time
-stops.txt -> stop_id, stop_name
-
-final result object description:
-trip : {
-    id:int,
-    days:list,
-    departure:{
-        station:
-        time:
-    }
-    arrival:{
-        station:
-        time:
-    }
-    stops:[
-        {
-            station:
-            time:
-        }
-    ]
-}
-"""
-
-
-"""
-route_id. from routes.txt we just need the route name
-trip_id. each trip is a combination of a route and the days it's available in.
-stop_times. all of the stops in a 
-"""
-
-"""
-agg method:
-trips.gruopby(route_id) -> dict of {route_id: {days: [service_id], trip_stops: [trip_id] }}
-then
-replace service_id with the days list
-replace trip_id in trip_stops with another aggregated
-stop_times_df.groupby('trip_id') -> dict of {trip_id: [
-                                                {
-                                                'stop_name': stop_name,
-                                                'time': time,
-                                                'seq: seq,
-                                                'type': type //:first|last|through
-                                                }
-                                            ]}
-
+general flow:
+1. calendar.txt   -> active days per service_id.
+2. routes.txt     -> Filter by train agency_id. used to translate route id to name.
+3. trips.txt      -> Filter by train routes. represents an execution in a route at a specific
+                     time, active on specific days represented by service_id.
+4. stops.txt      -> Map stop id to stop name.
+5. stop_times.txt -> Filter by train trips, contains each stop in a trip.
+6. Merge          -> Efficiently nest stops data into each trip object using an in-place loop.
+JSON Output Description:
+[
+    {
+        "route_long_name": "מודיעין מרכז-מודיעין מכבים רעות<->נהריה-נהריה",
+        "service_days": [...],
+        "trip_id": "1_470863",
+        "stops": [
+            {
+                "stop_sequence": 1,
+                "stop_name": "מודיעין מרכז",
+                "arrival_time": "07:48:00",
+                "stop_type": "תחנה ראשונה"
+            },
+            {
+                "stop_sequence": 2,
+                "stop_name": "פאתי מודיעין",
+                "arrival_time": "07:54:00",
+                "stop_type": "תחנת ביניים"
+            },
+            ...
+        ]
+    },
+    ...
+]
 """
 
 # zip extraction and cleaning
@@ -110,6 +93,7 @@ stop_times_df["stop_type"] = np.select(
 stop_times_df = stop_times_df.drop(columns=["pickup_type", "drop_off_type"])
 stop_times_df = stop_times_df.rename(columns={"stop_id": "stop_name"})
 
+
 trips_stops = (
     stop_times_df.groupby("trip_id")[
         ["stop_sequence", "stop_name", "arrival_time", "stop_type"]
@@ -120,6 +104,8 @@ trips_stops = (
 trips_days = trips_df.to_dict(orient="records")
 
 for trip in trips_days:
+    trip["start_station"] = trips_stops[trip["trip_id"]][0]
+    trip["end_station"] = trips_stops[trip["trip_id"]][-1]
     trip["stops"] = trips_stops[trip["trip_id"]]
 
 
